@@ -66,35 +66,35 @@ async function run() {
         }
 
         // use verify Admin after verify token
-        const verifyAdmin = async(req,res,next)=>{
+        const verifyAdmin = async (req, res, next) => {
             const email = req.decoded.email;
-            const query = {email:email}
+            const query = { email: email }
             const user = await userColletion.findOne(query);
             const isAdmin = user?.role === 'admin';
-            if(!isAdmin){
-                return res.status(403).send({message:'Forbidden access'})
+            if (!isAdmin) {
+                return res.status(403).send({ message: 'Forbidden access' })
             }
             next();
         }
 
         // Users related api
-        app.get('/users', verifyToken,verifyAdmin, async (req, res) => {
+        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
             const result = await userColletion.find().toArray()
             res.send(result);
         })
 
         app.get('/users/admin/:email', verifyToken, async (req, res) => {
             const email = req.params.email;
-            if(email !== req.decoded.email){
-                return res.status(403).send({message: 'Forbidden access'})
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'Forbidden access' })
             }
-            const query = {email: email}
+            const query = { email: email }
             const user = await userColletion.findOne(query)
             let admin = false;
-            if(user){
+            if (user) {
                 admin = user?.role === 'admin';
             }
-            res.send({admin})
+            res.send({ admin })
         })
 
         app.post('/users', async (req, res) => {
@@ -110,7 +110,7 @@ async function run() {
             res.send(result);
         })
 
-        app.patch('/users/admin/:id',verifyToken,verifyAdmin, async (req, res) => {
+        app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) }
             const updatedDoc = {
@@ -123,7 +123,7 @@ async function run() {
         })
 
         //delete specific users
-        app.delete('/users/:id',verifyToken,verifyAdmin, async (req, res) => {
+        app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await userColletion.deleteOne(query)
@@ -139,9 +139,17 @@ async function run() {
         })
 
         // add menu Item
-        app.post('/menu',verifyToken,verifyAdmin,async(req,res)=>{
+        app.post('/menu', verifyToken, verifyAdmin, async (req, res) => {
             const item = req.body;
             const result = await menuColletion.insertOne(item)
+            res.send(result)
+        })
+
+        // delete a item
+        app.delete('/menu/:id',verifyToken,verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await menuColletion.deleteOne(query)
             res.send(result)
         })
 
