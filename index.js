@@ -38,6 +38,7 @@ async function run() {
         const menuColletion = client.db('bistroDb').collection('menu');
         const reviewColletion = client.db('bistroDb').collection('reviews');
         const cartColletion = client.db('bistroDb').collection('carts');
+        const paymentColletion = client.db('bistroDb').collection('payments');
 
 
         // JWT related api
@@ -52,7 +53,7 @@ async function run() {
         // middlewares for verify jwt token
         const verifyToken = (req, res, next) => {
             // console.log('inside verify token',req.headers);
-            console.log('inside verify token', req.headers.authorization);
+            // console.log('inside verify token', req.headers.authorization);
             if (!req.headers.authorization) {
                 return res.status(401).send({ message: 'Unauthorized access' })
             }
@@ -211,6 +212,7 @@ async function run() {
             res.send(result)
         })
 
+        // payment related api
         // Payment intent
         app.post('/create-payment-intent',async(req,res)=>{
             const {price} = req.body;
@@ -227,6 +229,19 @@ async function run() {
             })
         })
 
+        // 
+        app.post('/payments',async(req,res)=>{
+            const payment = req.body;
+            const paymentResult = await paymentColletion.insertOne(payment)
+
+            // carefully delete each item from the cart
+            // console.log('payment info',payment);
+            const query = {_id:{
+                $in: payment.cartIds.map(id=>new ObjectId(id))  //ekadhik id query korte
+            }}
+            const deleteResult = await cartColletion.deleteMany(query);
+            res.send({paymentResult,deleteResult});
+        })
 
 
 
