@@ -229,7 +229,17 @@ async function run() {
             })
         })
 
-        // 
+        // get payment history
+        app.get('/payments/:email',verifyToken,async(req,res)=>{
+            const query = {email: req.params.email}
+            if(req.params.email !== req.decoded.email){
+                return res.status(403).send({message:'Forbidden access'})
+            }
+            const result = await paymentColletion.find(query).toArray()
+            res.send(result);
+        })
+
+        // save payment
         app.post('/payments',async(req,res)=>{
             const payment = req.body;
             const paymentResult = await paymentColletion.insertOne(payment)
@@ -242,8 +252,6 @@ async function run() {
             const deleteResult = await cartColletion.deleteMany(query);
             res.send({paymentResult,deleteResult});
         })
-
-
 
 
     } finally {
