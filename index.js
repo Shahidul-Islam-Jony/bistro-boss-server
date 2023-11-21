@@ -214,14 +214,14 @@ async function run() {
 
         // payment related api
         // Payment intent
-        app.post('/create-payment-intent',async(req,res)=>{
-            const {price} = req.body;
-            const amount = parseInt(price*100);
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
 
-            const  paymentIntent = await stripe.paymentIntents.create({
+            const paymentIntent = await stripe.paymentIntents.create({
                 amount: amount,
                 currency: 'usd',
-                payment_method_types:["card"]
+                payment_method_types: ["card"]
             })
 
             res.send({
@@ -230,28 +230,63 @@ async function run() {
         })
 
         // get payment history
-        app.get('/payments/:email',verifyToken,async(req,res)=>{
-            const query = {email: req.params.email}
-            if(req.params.email !== req.decoded.email){
-                return res.status(403).send({message:'Forbidden access'})
+        app.get('/payments/:email', verifyToken, async (req, res) => {
+            const query = { email: req.params.email }
+            if (req.params.email !== req.decoded.email) {
+                return res.status(403).send({ message: 'Forbidden access' })
             }
             const result = await paymentColletion.find(query).toArray()
             res.send(result);
         })
 
         // save payment
-        app.post('/payments',async(req,res)=>{
+        app.post('/payments', async (req, res) => {
             const payment = req.body;
             const paymentResult = await paymentColletion.insertOne(payment)
 
             // carefully delete each item from the cart
             // console.log('payment info',payment);
-            const query = {_id:{
-                $in: payment.cartIds.map(id=>new ObjectId(id))  //ekadhik id query korte
-            }}
+            const query = {
+                _id: {
+                    $in: payment.cartIds.map(id => new ObjectId(id))  //ekadhik id query korte
+                }
+            }
             const deleteResult = await cartColletion.deleteMany(query);
-            res.send({paymentResult,deleteResult});
+            res.send({ paymentResult, deleteResult });
         })
+
+        // stats or analytics
+        app.get('/admin-stats',verifyToken,verifyToken, async (req, res) => {
+            const users = await userColletion.estimatedDocumentCount();
+            const menuItems = await menuColletion.estimatedDocumentCount();
+            const orders = await paymentColletion.estimatedDocumentCount();
+
+            // this is not the best way to calculate total payments price
+            // const payments = await paymentColletion.find().toArray();
+            // const revenue = payments.reduce((sum, payment) => sum + payment.price, 0)
+
+            // this is the best way to calculate total payments
+            const result = await paymentColletion.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalRevenue: {
+                            $sum: '$price'
+                        }
+                    }
+                }
+            ]).toArray();
+            const revenue = result.length > 0 ? result[0].totalRevenue : 0;
+
+            res.send({
+                users,
+                menuItems,
+                orders,
+                revenue
+            })
+        })
+
+
 
 
     } finally {
