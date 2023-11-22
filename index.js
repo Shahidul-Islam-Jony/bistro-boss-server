@@ -286,6 +286,45 @@ async function run() {
             })
         })
 
+        // Order status
+        /**
+         * --------------------------
+         * NON-Efficient way
+         * --------------------------
+         * 1.load all the payments
+         * 2.for every menuItemIds (which is an array), go find the item from menu collection
+         * 3.for every item in the menu  in the collection that you found from a payment entry (document)
+         * 
+        */
+
+        // using aggregate pipe line
+        app.get('/order-stats',async(req,res)=>{
+            const result = await paymentColletion.aggregate([
+                {
+                    $unwind:'$menuItemIds'
+                },
+                {
+                    $lookup: {
+                        from: 'menu',
+                        localField: 'menuItemIds',
+                        foreignField: '_id',
+                        as: 'menuItems'
+                    }
+                },
+                {
+                    $unwind: '$menuItems'
+                },
+                {
+                    $group:{
+                        _id: '$menuItems.category',
+                        quantity:{ $sum: 1},
+                        revenue: {$sum: '$menuItems.price'}
+                    }
+                }
+            ]).toArray();
+            res.send(result)
+
+        })
 
 
 
